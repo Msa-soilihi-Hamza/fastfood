@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +16,7 @@ import java.util.Date;
 import java.util.Optional;
 
 /** Crée et vérifie les jetons JWT signés avec une clé secrète (HMAC-SHA256). */
+@Slf4j
 @Service
 public class JwtService {
 
@@ -23,8 +25,12 @@ public class JwtService {
 
     public JwtService(@Value("${app.jwt.secret}") String secret,
                       @Value("${app.jwt.expiration-minutes}") long expirationMinutes) {
+        // Lève une erreur au démarrage si le secret fait moins de 32 octets (256 bits)
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.validity = Duration.ofMinutes(expirationMinutes);
+        if (secret.startsWith("dev-secret")) {
+            log.warn("Secret JWT de développement utilisé : définissez JWT_SECRET dans .env avant tout déploiement");
+        }
     }
 
     public String generateToken(User user) {

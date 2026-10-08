@@ -18,6 +18,16 @@ export interface AuthResponse {
   user: User
 }
 
+export type ChallengePurpose = 'VERIFY_EMAIL' | 'LOGIN'
+
+/** Un code vient d'être envoyé par e-mail : il faut le saisir pour terminer. */
+export interface Challenge {
+  challengeId: string
+  purpose: ChallengePurpose
+  maskedEmail: string
+  resendAvailableInSeconds: number
+}
+
 export interface Product {
   id: number
   name: string

@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
+import type { Challenge } from '../api/types'
+import { CodeStep } from '../components/CodeStep'
+import { isStrongPassword, PasswordRules } from '../components/PasswordRules'
 import { Button, ErrorBanner, Field } from '../components/ui'
 import { useAuth } from '../context/AuthContext'
 
@@ -14,6 +17,7 @@ export function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
+  const [challenge, setChallenge] = useState<Challenge | null>(null)
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
@@ -21,8 +25,8 @@ export function RegisterPage() {
     setError(null)
     setFieldErrors({})
     try {
-      await register(email, password, firstName)
-      navigate('/loyalty', { replace: true, state: { welcome: true } })
+      setChallenge(await register(email, password, firstName))
+      setPassword('')
     } catch (e) {
       if (e instanceof ApiError) {
         setError(e.message)
@@ -35,6 +39,18 @@ export function RegisterPage() {
     }
   }
 
+  if (challenge) {
+    return (
+      <div className="mx-auto max-w-sm">
+        <CodeStep
+          challenge={challenge}
+          onVerified={() => navigate('/loyalty', { replace: true, state: { welcome: true } })}
+          onBack={() => setChallenge(null)}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-sm">
       <h1 className="text-3xl font-bold tracking-tight">Créer un compte</h1>
@@ -42,9 +58,10 @@ export function RegisterPage() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="Prénom" autoComplete="given-name" required value={firstName} onChange={(e) => setFirstName(e.target.value)} error={fieldErrors.firstName} />
         <Field label="E-mail" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} error={fieldErrors.email} />
-        <Field label="Mot de passe" type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} error={fieldErrors.password} hint="8 caractères minimum" />
+        <Field label="Mot de passe" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} error={fieldErrors.password} />
+        <PasswordRules password={password} />
         {error && Object.keys(fieldErrors).length === 0 && <ErrorBanner>{error}</ErrorBanner>}
-        <Button type="submit" disabled={submitting} className="mt-2 min-h-12 text-base">
+        <Button type="submit" disabled={submitting || !isStrongPassword(password)} className="mt-2 min-h-12 text-base">
           {submitting ? 'Création…' : 'Créer mon compte'}
         </Button>
       </form>

@@ -25,10 +25,24 @@ cd fastfood-api
 ./mvnw spring-boot:run
 ```
 
-L'API écoute sur `http://localhost:8080`. Au premier démarrage, Flyway crée les tables, le menu et les cadeaux de départ, et un compte restaurateur est créé :
+L'API écoute sur `http://localhost:8080`. Au premier démarrage, Flyway crée les tables, le menu et les cadeaux de départ, et un compte restaurateur est créé.
 
-- e-mail : `resto@fastfood.local`
-- mot de passe : `resto1234` *(développement uniquement, modifiable via `ADMIN_EMAIL` / `ADMIN_PASSWORD`)*
+### Fichier `.env` (facultatif, jamais commité)
+
+Les secrets se placent dans un fichier `.env` à la racine du projet, ignoré par Git :
+
+```properties
+RESEND_API_KEY=re_xxxxxxxx              # envoi réel des e-mails avec Resend
+ADMIN_EMAIL=votre.adresse@exemple.fr    # compte restaurateur : doit recevoir ses codes
+ADMIN_PASSWORD=<mot de passe de 12 caractères avec un symbole>
+JWT_SECRET=<chaîne aléatoire d'au moins 32 caractères>
+```
+
+**Sans clé Resend**, rien n'est envoyé : chaque e-mail, avec son code, est affiché dans la console de l'API. C'est le plus simple pour tester le projet.
+
+Avec l'adresse d'expédition de test de Resend (`onboarding@resend.dev`), Resend n'envoie qu'à l'adresse du compte Resend. Pour écrire à n'importe quel client, il faut vérifier un domaine dans Resend et définir `MAIL_FROM`.
+
+Sans `ADMIN_EMAIL`, le compte restaurateur est `resto@fastfood.local` : ses codes ne sont lisibles que dans la console. Sans `ADMIN_PASSWORD`, son mot de passe est généré aléatoirement au premier démarrage et affiché une seule fois dans la console : aucun mot de passe n'est écrit dans le code.
 
 Frontend (Node.js requis), dans un second terminal :
 
@@ -50,9 +64,31 @@ cd fastfood-api
 ./mvnw test
 ```
 
+## Authentification
+
+Connexion en deux étapes, avec un code à 6 chiffres reçu par e-mail :
+
+1. **Inscription** : le compte est créé non confirmé, un code est envoyé. Le compte n'est actif qu'une fois le code saisi.
+2. **Connexion** : e-mail + mot de passe, puis le code reçu par e-mail. Le jeton JWT n'est délivré qu'après le code.
+
+Protections :
+
+| Menace | Protection |
+|---|---|
+| Mot de passe faible | 12 caractères minimum dont un symbole, vérifié côté serveur (`@StrongPassword`) et affiché en direct dans le formulaire |
+| Force brute sur un compte | 5 mauvais mots de passe → compte bloqué 15 minutes, même avec le bon mot de passe ensuite |
+| Force brute depuis une connexion | Limites par adresse IP sur l'inscription, la connexion, la saisie et le renvoi de code (HTTP 429 + `Retry-After`) |
+| Deviner un code | 5 essais par code, validité 10 minutes, usage unique, nouveau code = ancien annulé |
+| Inonder une boîte mail | 60 secondes entre deux renvois, 5 envois maximum par code |
+| Savoir si un e-mail a un compte | Même message et même temps de réponse pour un e-mail inconnu ou un mauvais mot de passe |
+| Fuite de la base | Mots de passe et codes stockés uniquement sous forme d'empreinte BCrypt |
+| Fuite de secrets | Clés dans `.env` (ignoré par Git), avertissement au démarrage si le secret JWT de développement est utilisé |
+
+Les compteurs anti-abus sont en mémoire (`RateLimiter`) : ils suffisent pour un seul serveur. Avec plusieurs instances, il faudrait les partager (Redis).
+
 ## Parcours
 
-1. Le client s'inscrit et reçoit un code fidélité (ex. `K7P2QX`).
+1. Le client s'inscrit, confirme son e-mail et reçoit un code fidélité (ex. `K7P2QX`).
 2. Il commande : `RECEIVED`.
 3. Le restaurateur fait avancer la commande : `PREPARING` puis `READY`.
 4. Au comptoir, le client paie et donne son code. Le restaurateur valide la remise : `COMPLETED`, points crédités.
@@ -68,7 +104,8 @@ RECEIVED ──► PREPARING ──► READY ──► COMPLETED
 
 | Méthode | Route | Accès |
 |---|---|---|
-| POST | `/api/auth/register` · `/api/auth/login` | public |
+| POST | `/api/auth/register` · `/api/auth/login` (envoient un code) | public |
+| POST | `/api/auth/verify` (code → jeton) · `/api/auth/resend` | public |
 | GET | `/api/auth/me` | connecté |
 | GET | `/api/products` · `/api/settings` · `/api/rewards` | public |
 | POST | `/api/orders` | client |
@@ -84,7 +121,7 @@ RECEIVED ──► PREPARING ──► READY ──► COMPLETED
 | GET / POST / PUT | `/api/admin/rewards…` | restaurateur |
 | PUT | `/api/admin/settings` | restaurateur |
 
-Le jeton reçu au login s'envoie dans l'en-tête `Authorization: Bearer <jeton>`.
+Le jeton reçu après `/api/auth/verify` s'envoie dans l'en-tête `Authorization: Bearer <jeton>`.
 
 ## Choix techniques
 
