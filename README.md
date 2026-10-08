@@ -34,15 +34,15 @@ Les secrets se placent dans un fichier `.env` à la racine du projet, ignoré pa
 ```properties
 RESEND_API_KEY=re_xxxxxxxx              # envoi réel des e-mails avec Resend
 ADMIN_EMAIL=votre.adresse@exemple.fr    # compte restaurateur : doit recevoir ses codes
-ADMIN_PASSWORD=Un-Mot2Passe-Solide!
-JWT_SECRET=une-longue-chaine-aleatoire-d-au-moins-32-caracteres
+ADMIN_PASSWORD=<mot de passe de 12 caractères avec un symbole>
+JWT_SECRET=<chaîne aléatoire d'au moins 32 caractères>
 ```
 
 **Sans clé Resend**, rien n'est envoyé : chaque e-mail, avec son code, est affiché dans la console de l'API. C'est le plus simple pour tester le projet.
 
 Avec l'adresse d'expédition de test de Resend (`onboarding@resend.dev`), Resend n'envoie qu'à l'adresse du compte Resend. Pour écrire à n'importe quel client, il faut vérifier un domaine dans Resend et définir `MAIL_FROM`.
 
-Sans `ADMIN_EMAIL`, le compte restaurateur est `resto@fastfood.local` / `Resto-Demo-2026!` : ses codes ne sont lisibles que dans la console.
+Sans `ADMIN_EMAIL`, le compte restaurateur est `resto@fastfood.local` : ses codes ne sont lisibles que dans la console. Sans `ADMIN_PASSWORD`, son mot de passe est généré aléatoirement au premier démarrage et affiché une seule fois dans la console : aucun mot de passe n'est écrit dans le code.
 
 Frontend (Node.js requis), dans un second terminal :
 

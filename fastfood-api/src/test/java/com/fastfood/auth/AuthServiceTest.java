@@ -13,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -23,7 +24,9 @@ import static org.mockito.Mockito.*;
 class AuthServiceTest {
 
     private static final String IP = "203.0.113.4";
-    private static final String PASSWORD = "Burger-Frites2026";
+    // Générés à chaque exécution : aucun mot de passe n'est écrit en dur dans le code
+    private static final String PASSWORD = randomPassword();
+    private static final String WRONG_PASSWORD = randomPassword();
 
     private final UserRepository users = mock(UserRepository.class);
     private final ChallengeService challengeService = mock(ChallengeService.class);
@@ -64,7 +67,7 @@ class AuthServiceTest {
 
     @Test
     void wrongPasswordAndUnknownEmailGiveTheSameAnswer() {
-        assertThatThrownBy(() -> service.login(new LoginRequest("sami@test.fr", "mauvais"), IP))
+        assertThatThrownBy(() -> service.login(new LoginRequest("sami@test.fr", WRONG_PASSWORD), IP))
                 .hasMessage("E-mail ou mot de passe incorrect");
         assertThatThrownBy(() -> service.login(new LoginRequest("inconnu@test.fr", PASSWORD), IP))
                 .hasMessage("E-mail ou mot de passe incorrect");
@@ -74,7 +77,7 @@ class AuthServiceTest {
     @Test
     void theAccountIsLockedAfterFiveWrongPasswordsEvenWithTheRightOne() {
         for (int i = 0; i < AuthService.MAX_FAILED_LOGINS_PER_ACCOUNT; i++) {
-            assertThatThrownBy(() -> service.login(new LoginRequest("sami@test.fr", "mauvais"), "10.0.0." + 1))
+            assertThatThrownBy(() -> service.login(new LoginRequest("sami@test.fr", WRONG_PASSWORD), "10.0.0.1"))
                     .isInstanceOf(ApiException.class);
         }
 
@@ -101,7 +104,7 @@ class AuthServiceTest {
         sami.setEmailVerified(false);
         String oldHash = sami.getPasswordHash();
 
-        service.register(new RegisterRequest("sami@test.fr", "Nouveau-Mot2Passe", "Sami"), IP);
+        service.register(new RegisterRequest("sami@test.fr", randomPassword(), "Sami"), IP);
 
         assertThat(sami.getPasswordHash()).isNotEqualTo(oldHash);
         verify(challengeService).start(sami, ChallengePurpose.VERIFY_EMAIL);
@@ -127,5 +130,10 @@ class AuthServiceTest {
         assertThatThrownBy(() -> service.register(new RegisterRequest("client9@test.fr", PASSWORD, "Client"), IP))
                 .isInstanceOfSatisfying(ApiException.class,
                         e -> assertThat(e.getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS));
+    }
+
+    /** Respecte la règle du serveur : bien plus de 12 caractères, avec des symboles (! et -). */
+    private static String randomPassword() {
+        return "Test!" + UUID.randomUUID();
     }
 }
