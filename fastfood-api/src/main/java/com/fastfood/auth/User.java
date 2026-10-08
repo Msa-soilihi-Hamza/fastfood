@@ -39,6 +39,10 @@ public class User {
     @Column(nullable = false)
     private int points;
 
+    /** Vrai une fois le code reçu par e-mail saisi : avant, le compte ne peut pas se connecter. */
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified;
+
     /** Verrou optimiste : deux mises à jour simultanées des points ne s'écrasent pas. */
     @Version
     private long version;

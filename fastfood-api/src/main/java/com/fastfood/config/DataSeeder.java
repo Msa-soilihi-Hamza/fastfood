@@ -10,8 +10,11 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
+import java.util.Locale;
+
 /**
- * Crée le compte restaurateur au premier démarrage.
+ * Crée le compte restaurateur de l'adresse configurée (ADMIN_EMAIL) s'il n'existe pas encore.
+ * Comme la connexion demande un code reçu par e-mail, cette adresse doit être une vraie boîte mail.
  * Le menu et les cadeaux de départ sont insérés par les migrations Flyway.
  */
 @Slf4j
@@ -30,10 +33,10 @@ public class DataSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (users.existsByRole(Role.RESTAURANT)) {
+        if (users.existsByEmail(adminEmail.trim().toLowerCase(Locale.ROOT))) {
             return;
         }
-        authService.createUser(adminEmail, adminPassword, "Restaurateur", Role.RESTAURANT);
+        authService.createVerifiedUser(adminEmail, adminPassword, "Restaurateur", Role.RESTAURANT);
         log.info("Compte restaurateur créé : {}", adminEmail);
     }
 }

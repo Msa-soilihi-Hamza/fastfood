@@ -2,8 +2,10 @@ package com.fastfood.config;
 
 import com.fastfood.common.ApiException;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -16,8 +18,14 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
-    public ProblemDetail handleApi(ApiException ex) {
-        return ProblemDetail.forStatusAndDetail(ex.getStatus(), ex.getMessage());
+    public ResponseEntity<ProblemDetail> handleApi(ApiException ex) {
+        var response = ResponseEntity.status(ex.getStatus());
+        if (ex.getRetryAfter() != null) {
+            // Arrondi à la seconde supérieure : on ne dit jamais de réessayer trop tôt
+            long seconds = Math.max(1, (ex.getRetryAfter().toMillis() + 999) / 1000);
+            response.header(HttpHeaders.RETRY_AFTER, String.valueOf(seconds));
+        }
+        return response.body(ProblemDetail.forStatusAndDetail(ex.getStatus(), ex.getMessage()));
     }
 
     /** Levée par @Version quand deux personnes modifient la même donnée en même temps. */
