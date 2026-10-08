@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: fastfood-db
+    environment:
+      POSTGRES_DB: fastfood
+      POSTGRES_USER: fastfood
+      POSTGRES_PASSWORD: fastfood
+    # 5433 côté Windows : le port 5432 est souvent déjà pris par un PostgreSQL installé localement
+    ports:
+      - "5433:5432"
+    volumes:
+      - fastfood-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fastfood -d fastfood"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  fastfood-data:
