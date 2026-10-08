@@ -8,11 +8,10 @@ Application de commande pour **un fast-food qui veut sa propre appli** au lieu d
 
 ## Stack
 
-API REST uniquement : le projet se concentre sur le backend Java.
-
 | Partie | Technologies |
 |---|---|
 | API (`fastfood-api/`) | Java 21, Spring Boot 4, Spring Security + JWT, Spring Data JPA, Bean Validation, Lombok |
+| Frontend (`fastfood-web/`) | React 19, TypeScript, Vite, React Router, Tailwind CSS |
 | Base de données | PostgreSQL 17 via Docker, migrations Flyway |
 | Tests | JUnit 5, Mockito, AssertJ |
 
@@ -31,7 +30,20 @@ L'API écoute sur `http://localhost:8080`. Au premier démarrage, Flyway crée l
 - e-mail : `resto@fastfood.local`
 - mot de passe : `resto1234` *(développement uniquement, modifiable via `ADMIN_EMAIL` / `ADMIN_PASSWORD`)*
 
-Tests :
+Frontend (Node.js requis), dans un second terminal :
+
+```bash
+cd fastfood-web
+npm install
+npm run dev
+```
+
+L'interface s'ouvre sur `http://localhost:5173`. En développement, Vite redirige les appels `/api` vers Spring Boot.
+
+- **Client** : menu, panier, choix à emporter ou sur place, suivi des commandes en direct, code et points de fidélité.
+- **Restaurateur** : tableau des commandes (reçues, en préparation, prêtes), remise avec le code client, comptoir fidélité, plats épuisés.
+
+Tests de l'API :
 
 ```bash
 cd fastfood-api
