@@ -1,14 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { tokenStore } from '../api/client'
 import { authApi } from '../api/endpoints'
-import type { AuthResponse, User } from '../api/types'
+import type { AuthResponse, Challenge, User } from '../api/types'
 
 interface AuthState {
   user: User | null
   /** Vrai tant qu'on vérifie le jeton enregistré au chargement de la page. */
   loading: boolean
-  login: (email: string, password: string) => Promise<User>
-  register: (email: string, password: string, firstName: string) => Promise<User>
+  /** Étape 1 : vérifie le mot de passe, un code est envoyé par e-mail. */
+  login: (email: string, password: string) => Promise<Challenge>
+  /** Étape 1 : crée le compte, un code de confirmation est envoyé par e-mail. */
+  register: (email: string, password: string, firstName: string) => Promise<Challenge>
+  /** Étape 2 : le bon code connecte l'utilisateur. */
+  verify: (challengeId: string, code: string) => Promise<User>
   logout: () => void
   refresh: () => Promise<void>
 }
@@ -42,8 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthState>(() => ({
     user,
     loading,
-    login: async (email, password) => accept(await authApi.login(email, password)),
-    register: async (email, password, firstName) => accept(await authApi.register(email, password, firstName)),
+    login: (email, password) => authApi.login(email, password),
+    register: (email, password, firstName) => authApi.register(email, password, firstName),
+    verify: async (challengeId, code) => accept(await authApi.verify(challengeId, code)),
     logout: () => {
       tokenStore.set(null)
       setUser(null)

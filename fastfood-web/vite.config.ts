@@ -10,7 +10,7 @@ export default defineConfig({
     // la vérification CORS de l'API ne dépende pas du port choisi par Vite (5173, 5174…).
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: process.env.API_URL ?? 'http://localhost:8080',
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq) => proxyReq.removeHeader('origin'))
         },

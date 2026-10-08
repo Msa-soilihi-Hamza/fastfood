@@ -1,6 +1,7 @@
 import { api } from './client'
 import type {
   AuthResponse,
+  Challenge,
   CompleteOrderResponse,
   CustomerLookup,
   MyLoyalty,
@@ -16,9 +17,13 @@ import type {
 
 export const authApi = {
   register: (email: string, password: string, firstName: string) =>
-    api<AuthResponse>('POST', '/auth/register', { email, password, firstName }),
+    api<Challenge>('POST', '/auth/register', { email, password, firstName }),
   login: (email: string, password: string) =>
-    api<AuthResponse>('POST', '/auth/login', { email, password }),
+    api<Challenge>('POST', '/auth/login', { email, password }),
+  verify: (challengeId: string, code: string) =>
+    api<AuthResponse>('POST', '/auth/verify', { challengeId, code }),
+  resend: (challengeId: string) =>
+    api<Challenge>('POST', '/auth/resend', { challengeId }),
   me: () => api<User>('GET', '/auth/me'),
 }
 
